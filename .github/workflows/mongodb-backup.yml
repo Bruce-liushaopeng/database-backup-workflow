@@ -1,11 +1,12 @@
 name: MongoDB Backup to Cloudflare R2
 
-on: # trigger on schedule
-  schedule:
-    - cron: "0 */12 * * *" 
-    # minute hour day-of-month month day-of-week
-    # 0min, every 12 hours, each day-of-month, each month, each day-of-week 
+on:
+  # Manual trigger only after proof concept.
+  # Schedule disabled so this workflow does not run automatically.
   workflow_dispatch:
+
+  # schedule:
+  #   - cron: "0 */12 * * *"
 
 jobs:
   backup:
