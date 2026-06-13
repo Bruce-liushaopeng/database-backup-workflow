@@ -1,0 +1,56 @@
+name: MongoDB Backup to Cloudflare R2
+
+on: # trigger on schedule
+  schedule:
+    - cron: "0 */12 * * *" 
+    # minute hour day-of-month month day-of-week
+    # 0min, every 12 hours, each day-of-month, each month, each day-of-week 
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install MongoDB Database Tools
+        run: |
+          curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
+            sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
+
+          echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu jammy/mongodb-org/7.0 multiverse" | \
+            sudo tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+
+          sudo apt-get update
+          sudo apt-get install -y mongodb-database-tools
+
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y awscli
+
+      - name: Create MongoDB backup
+        run: |
+          TIMESTAMP=$(date +"%Y-%m-%d-%H-%M-%S")
+          BACKUP_DIR="backup-$TIMESTAMP"
+          ARCHIVE_NAME="$BACKUP_DIR.tar.gz"
+
+          mongodump \
+            --uri="${{ secrets.MONGODB_URI }}" \
+            --out="$BACKUP_DIR"
+
+          tar -czf "$ARCHIVE_NAME" "$BACKUP_DIR"
+
+          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
+
+      - name: Upload backup to Cloudflare R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 cp "$ARCHIVE_NAME" \
+            "s3://${{ secrets.R2_BUCKET_NAME }}/mongodb/$ARCHIVE_NAME" \
+            --endpoint-url "https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com"
