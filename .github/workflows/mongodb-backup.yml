@@ -14,10 +14,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 #checks out, we normally do this, but in our case doesnt really needed
 
       - name: Install MongoDB Database Tools
-        run: |
+        run: | #the \ symbol is simply telling to execute the next line, and | allow execute multiple command together
           curl -fsSL https://www.mongodb.org/static/pgp/server-7.0.asc | \
             sudo gpg -o /usr/share/keyrings/mongodb-server-7.0.gpg --dearmor
 
